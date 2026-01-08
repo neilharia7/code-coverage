@@ -1,0 +1,21 @@
+{
+  "name": "code-coverage-demo",
+  "version": "1.0.0",
+  "description": "A sample Node.js app demonstrating code coverage with Coveralls",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "nodejs",
+    "coverage",
+    "coveralls",
+    "jest"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}
