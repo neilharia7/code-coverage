@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="119" height="18" role="img" aria-label="statements: 100.0%">
+  <title>statements: 100.0%</title>
+  <rect width="70" height="18" fill="#24292f"/>
+  <rect x="70" width="49" height="18" fill="#4c1"/>
+  <g fill="#fff" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-weight="600" font-size="11">
+    <text x="35" y="13">statements</text>
+    <text x="94.5" y="13">100.0%</text>
+  </g>
+</svg>

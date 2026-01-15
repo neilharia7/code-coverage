@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-01-15T19:44:53.003Z",
+  "coverage": {
+    "lines": {
+      "percentage": 100,
+      "covered": 88,
+      "total": 88,
+      "missed": 0
+    },
+    "branches": {
+      "percentage": 96.92,
+      "covered": 63,
+      "total": 65
+    },
+    "functions": {
+      "percentage": 100,
+      "covered": 20,
+      "total": 20
+    },
+    "statements": {
+      "percentage": 100,
+      "covered": 95,
+      "total": 95
+    }
+  },
+  "status": "passing",
+  "threshold": 80
+}
