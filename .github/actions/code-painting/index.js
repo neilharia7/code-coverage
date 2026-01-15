@@ -159,11 +159,178 @@ function pctStr(n) {
   return n.toFixed(2);
 }
 
-function buildSummaryMarkdown({ title, metrics, threshold }) {
+function buildHtmlCodePaintingSummary({ title, metrics, threshold, files, maxFiles = 5, maxLinesPerFile = 50 }) {
+  const linePct = asNumber(metrics.lines.pct, 0);
+  const gate = linePct >= threshold ? 'PASS' : 'FAIL';
+  const gateColor = gate === 'PASS' ? '#28a745' : '#dc3545';
+  
+  const filesToShow = files.slice(0, maxFiles);
+  const fileSections = filesToShow.map(f => {
+    const lines = [];
+    const totalLines = f.sourceLines.length;
+    const showLines = Math.min(totalLines, maxLinesPerFile);
+    const hasMore = totalLines > maxLinesPerFile;
+    
+    for (let i = 0; i < showLines; i++) {
+      const lineNo = i + 1;
+      const line = f.sourceLines[i] || ' ';
+      const hits = f.lineHits?.get(lineNo) ?? 0;
+      const isCovered = hits > 0;
+      const isFail = isCovered && f.failingLines?.has(lineNo);
+      
+      let bgColor = 'transparent';
+      let indicator = '❌';
+      if (isFail) {
+        bgColor = 'rgba(243, 156, 18, 0.30)';
+        indicator = '⚠️';
+      } else if (isCovered) {
+        bgColor = 'rgba(46, 204, 113, 0.25)';
+        indicator = '✅';
+      }
+      
+      const lineNum = String(lineNo).padStart(4, ' ');
+      lines.push(
+        `<div style="display: grid; grid-template-columns: 40px 60px 1fr; gap: 8px; padding: 2px 8px; background: ${bgColor}; font-family: ui-monospace, monospace; font-size: 12px;">` +
+        `<span style="text-align: right; color: #666;">${indicator}</span>` +
+        `<span style="text-align: right; color: #999;">${lineNum}</span>` +
+        `<span>${escapeHtml(line)}</span>` +
+        `</div>`
+      );
+    }
+    
+    const coverageBadge = Number.isFinite(f.fileCoveragePct)
+      ? ` <span style="background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 12px; font-size: 11px;">${pctStr(f.fileCoveragePct)}%</span>`
+      : '';
+    const moreIndicator = hasMore ? ` <em style="color: #999;">(showing first ${maxLinesPerFile} of ${totalLines} lines)</em>` : '';
+    
+    return `
+      <details style="margin: 12px 0; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 8px;">
+        <summary style="cursor: pointer; font-weight: 600; padding: 4px;">📄 ${escapeHtml(f.relPath)}${coverageBadge}${moreIndicator}</summary>
+        <div style="margin-top: 8px; border: 1px solid rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+          ${lines.join('\n')}
+        </div>
+      </details>
+    `.trim();
+  }).join('\n');
+  
+  const moreFilesNote = files.length > maxFiles
+    ? `<p><em>... and ${files.length - maxFiles} more file(s). Download the HTML report artifact for full details.</em></p>`
+    : '';
+  
+  return `
+<h2>${escapeHtml(title)} — Coverage Summary</h2>
+
+<p><strong>Quality Gate (lines ≥ ${threshold}%):</strong> <span style="color: ${gateColor}; font-weight: 600;">${gate}</span></p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Metric</th>
+      <th style="text-align: right;">Coverage</th>
+      <th style="text-align: right;">Covered / Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Lines</td>
+      <td style="text-align: right;"><strong>${pctStr(asNumber(metrics.lines.pct, 0))}%</strong></td>
+      <td style="text-align: right;">${metrics.lines.covered ?? 0} / ${metrics.lines.total ?? 0}</td>
+    </tr>
+    <tr>
+      <td>Branches</td>
+      <td style="text-align: right;"><strong>${pctStr(asNumber(metrics.branches.pct, 0))}%</strong></td>
+      <td style="text-align: right;">${metrics.branches.covered ?? 0} / ${metrics.branches.total ?? 0}</td>
+    </tr>
+    <tr>
+      <td>Functions</td>
+      <td style="text-align: right;"><strong>${pctStr(asNumber(metrics.functions.pct, 0))}%</strong></td>
+      <td style="text-align: right;">${metrics.functions.covered ?? 0} / ${metrics.functions.total ?? 0}</td>
+    </tr>
+    <tr>
+      <td>Statements</td>
+      <td style="text-align: right;"><strong>${pctStr(asNumber(metrics.statements.pct, 0))}%</strong></td>
+      <td style="text-align: right;">${metrics.statements.covered ?? 0} / ${metrics.statements.total ?? 0}</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h3>🎨 Code Painting</h3>
+
+<p><strong>Legend:</strong></p>
+<ul>
+  <li>✅ Covered by tests (passing)</li>
+  <li>⚠️ Covered by tests (failing - appears in Jest error stack traces)</li>
+  <li>❌ Not covered by tests</li>
+</ul>
+
+${fileSections}
+
+${moreFilesNote}
+
+<p><em>💡 Expand the file sections above to view the code painting. For a full interactive HTML report, download the workflow artifact.</em></p>
+`.trim();
+}
+
+function buildCodePaintingMarkdown({ files, maxFiles = 5, maxLinesPerFile = 50 }) {
+  const sections = [];
+  const filesToShow = files.slice(0, maxFiles);
+  
+  for (const f of filesToShow) {
+    const lines = [];
+    const totalLines = f.sourceLines.length;
+    const showLines = Math.min(totalLines, maxLinesPerFile);
+    const hasMore = totalLines > maxLinesPerFile;
+    
+    for (let i = 0; i < showLines; i++) {
+      const lineNo = i + 1;
+      const line = f.sourceLines[i];
+      const hits = f.lineHits?.get(lineNo) ?? 0;
+      const isCovered = hits > 0;
+      const isFail = isCovered && f.failingLines?.has(lineNo);
+      
+      let indicator = '❌'; // uncovered
+      if (isFail) {
+        indicator = '⚠️'; // covered but failing
+      } else if (isCovered) {
+        indicator = '✅'; // covered and passing
+      }
+      
+      const lineNum = String(lineNo).padStart(4, ' ');
+      const displayLine = line || ' '; // handle empty lines
+      lines.push(`${indicator} ${lineNum} | ${displayLine}`);
+    }
+    
+    const coverageBadge = Number.isFinite(f.fileCoveragePct)
+      ? ` — ${pctStr(f.fileCoveragePct)}% coverage`
+      : '';
+    const moreIndicator = hasMore ? ` _(showing first ${maxLinesPerFile} of ${totalLines} lines)_` : '';
+    
+    sections.push([
+      `<details>`,
+      `<summary><strong>📄 ${f.relPath}</strong>${coverageBadge}${moreIndicator}</summary>`,
+      ``,
+      `\`\`\``,
+      ...lines,
+      `\`\`\``,
+      `</details>`,
+      ``,
+    ].join('\n'));
+  }
+  
+  if (files.length > maxFiles) {
+    sections.push(`_... and ${files.length - maxFiles} more file(s). Download the HTML report for full details._`);
+  }
+  
+  return sections.join('\n');
+}
+
+function buildSummaryMarkdown({ title, metrics, threshold, files, includeCodePainting = true }) {
   const linePct = asNumber(metrics.lines.pct, 0);
   const gate = linePct >= threshold ? 'PASS' : 'FAIL';
 
-  return [
+  const parts = [
     `## ${title} — Coverage Summary`,
     '',
     `- **Quality Gate (lines ≥ ${threshold}%):** ${gate}`,
@@ -175,9 +342,29 @@ function buildSummaryMarkdown({ title, metrics, threshold }) {
     `| Functions | ${pctStr(asNumber(metrics.functions.pct, 0))}% | ${metrics.functions.covered ?? 0} / ${metrics.functions.total ?? 0} |`,
     `| Statements | ${pctStr(asNumber(metrics.statements.pct, 0))}% | ${metrics.statements.covered ?? 0} / ${metrics.statements.total ?? 0} |`,
     '',
-    '_Download the “code painting” HTML report from the workflow artifacts to view per-line highlights._',
-    '',
-  ].join('\n');
+  ];
+  
+  if (includeCodePainting && files && files.length > 0) {
+    parts.push(
+      '---',
+      '',
+      '### 🎨 Code Painting',
+      '',
+      '**Legend:**',
+      '- ✅ Covered by tests (passing)',
+      '- ⚠️ Covered by tests (failing - appears in Jest error stack traces)',
+      '- ❌ Not covered by tests',
+      '',
+      buildCodePaintingMarkdown({ files }),
+      '',
+      '_💡 Expand the file sections above to view the code painting. For a full interactive HTML report, download the workflow artifact._',
+      '',
+    );
+  } else {
+    parts.push('_Download the "code painting" HTML report from the workflow artifacts to view per-line highlights._', '');
+  }
+  
+  return parts.join('\n');
 }
 
 function buildHtmlReport({ title, files }) {
@@ -457,12 +644,15 @@ async function main() {
   };
   writeText(path.join(outDir, 'report.json'), JSON.stringify(reportJson, null, 2));
 
-  const summaryMd = buildSummaryMarkdown({ title, metrics, threshold });
+  const summaryMd = buildSummaryMarkdown({ title, metrics, threshold, files });
   writeText(path.join(outDir, 'summary.md'), summaryMd);
 
-  // GitHub step summary
+  // GitHub step summary (supports HTML)
   const stepSummary = process.env.GITHUB_STEP_SUMMARY;
-  if (stepSummary) fs.appendFileSync(stepSummary, summaryMd);
+  if (stepSummary) {
+    const htmlSummary = buildHtmlCodePaintingSummary({ title, metrics, threshold, files });
+    fs.appendFileSync(stepSummary, htmlSummary);
+  }
 
   // PR comment (optional)
   if (prNumber && token && process.env.GITHUB_REPOSITORY) {
