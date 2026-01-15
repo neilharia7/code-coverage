@@ -4,7 +4,7 @@ module.exports = {
     'src/**/*.js',
     '!src/index.js'
   ],
-  coverageReporters: ['text', 'lcov', 'html'],
+  coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
   coverageDirectory: 'coverage',
   testMatch: ['**/tests/**/*.test.js'],
   verbose: true

@@ -1,16 +1,26 @@
 {
   "name": "code-coverage-demo",
   "version": "1.0.0",
-  "description": "A sample Node.js app demonstrating code coverage with Coveralls",
+  "description": "A sample Node.js app demonstrating code coverage with self-hosted runner",
   "main": "src/index.js",
   "scripts": {
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "badges": "node scripts/generate-badge.js",
+    "coverage:server": "node scripts/coverage-server.js",
+    "coverage:server:dev": "COVERAGE_PORT=3000 node scripts/coverage-server.js",
+    "coverage:full": "npm run test:coverage && npm run badges",
+    "setup": "chmod +x scripts/setup-runner.sh && ./scripts/setup-runner.sh",
+    "codecov:setup": "chmod +x codecov-self-hosted/scripts/setup.sh && cd codecov-self-hosted && ./scripts/setup.sh",
+    "codecov:start": "cd codecov-self-hosted && (command -v podman-compose >/dev/null && podman-compose up -d || (podman compose version >/dev/null 2>&1 && podman compose up -d || docker compose up -d))",
+    "codecov:stop": "cd codecov-self-hosted && (command -v podman-compose >/dev/null && podman-compose down || (podman compose version >/dev/null 2>&1 && podman compose down || docker compose down))",
+    "codecov:logs": "cd codecov-self-hosted && (command -v podman-compose >/dev/null && podman-compose logs -f || (podman compose version >/dev/null 2>&1 && podman compose logs -f || docker compose logs -f))",
+    "codecov:ps": "cd codecov-self-hosted && (command -v podman-compose >/dev/null && podman-compose ps || (podman compose version >/dev/null 2>&1 && podman compose ps || docker compose ps))"
   },
   "keywords": [
     "nodejs",
     "coverage",
-    "coveralls",
+    "self-hosted",
     "jest"
   ],
   "author": "",
