@@ -1,0 +1,61 @@
+name: Code Painting + Coverage Summary
+description: Generates an HTML "code painting" report from LCOV + Jest results and writes a Quality-Monitor-style coverage summary to GitHub.
+author: code-coverage-demo
+
+inputs:
+  lcov-path:
+    description: Path to lcov.info
+    required: false
+    default: coverage/lcov.info
+  coverage-summary-json:
+    description: Path to Jest coverage-summary.json
+    required: false
+    default: coverage/coverage-summary.json
+  jest-results-json:
+    description: Optional path to Jest --json output file (used to mark failing stack-trace lines as orange)
+    required: false
+    default: jest-results.json
+  output-dir:
+    description: Directory to write the HTML report to (relative to repo root)
+    required: false
+    default: code-painting-report
+  pr-number:
+    description: Pull request number (enables PR comment)
+    required: false
+  github-token:
+    description: GitHub token used for PR commenting
+    required: false
+    default: ${{ github.token }}
+  comments-strategy:
+    description: PR comment strategy (UPDATE|ADD|REMOVE)
+    required: false
+    default: UPDATE
+  title:
+    description: Title for the report/summary
+    required: false
+    default: Code Painting
+  coverage-threshold:
+    description: Line coverage percentage threshold used for the quality gate
+    required: false
+    default: "80"
+
+outputs:
+  report-dir:
+    description: Absolute path to the generated report directory
+  index-html:
+    description: Absolute path to the generated index.html
+  line-coverage:
+    description: Line coverage percentage (0-100)
+  branch-coverage:
+    description: Branch coverage percentage (0-100)
+  function-coverage:
+    description: Function coverage percentage (0-100)
+  statement-coverage:
+    description: Statement coverage percentage (0-100)
+  quality-gate:
+    description: PASS or FAIL depending on coverage-threshold vs line-coverage
+
+runs:
+  using: node20
+  main: index.js
+
